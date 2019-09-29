@@ -22,17 +22,19 @@ def hex_dump(f):
     # 00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00
     d = f.read(16)
     for i in range(16):
+      if i == 8:
+        line += " "
       if i < len(d):
         line += binascii.hexlify(d[i:i + 1]).decode('ascii')
       else:
         line += "  "
       line += " "
-      if i == 8:
-        line += " "
 
     line += ' |'
     # ................
     for i in range(16):
+      if i == 8:
+        line += " "
       if i >= len(d):
         line += " "
         continue
@@ -53,9 +55,12 @@ def debug_print_str(s):
   :param str|bytes s:
   """
   if isinstance(s, bytes):
-    s = s.decode("utf8")  # ok?
+    try:
+      s = s.decode("utf8")
+    except UnicodeDecodeError:
+      pass
   if len(s) >= 100:
-    print(repr(s[:40] + "..." + s[-40:]))
+    print(repr(s[:40]) + "..." + repr(s[-40:]))
     return
   print(repr(s))
 
@@ -71,14 +76,34 @@ class Reader:
     f = self.file
 
     assert_same(f.read(2), b"\xec\xce")
-    x = self.read_uint16()
-    x = self.read_uint32()
-    x = self.read_uint32()
-    x = self.read_uint32()
-    s = self.read_pascal_str()
-    assert_same(s, b"cmd.log")
+    x1 = self.read_uint16()
+    x2 = self.read_uint32()
+    x3 = self.read_uint32()
+    x4 = self.read_uint32()
+    print(x1, x2, x3, x4)
+
+    d_filename = self.read_pascal_str()
+    debug_print_str(d_filename)
+    d_file_data = self.read_pascal_str()
+    debug_print_str(d_file_data)
+
+    x = self.read_uint32()  # 1. ?
+    print(x)
+
     s = self.read_pascal_str()
     debug_print_str(s)
+    s = self.read_pascal_str()
+    debug_print_str(s)
+
+    x = self.read_uint32()  # 2. ?
+    print(x)
+
+    d_filename = self.read_pascal_str()
+    debug_print_str(d_filename)
+    d_file_data = self.read_pascal_str()
+    debug_print_str(d_file_data)
+    # open(d_filename, "wb").write(d_file_data)
+
     hex_dump(f)
 
   def read_uint16(self):
