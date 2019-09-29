@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import argparse
 import struct
 import typing
@@ -48,6 +49,8 @@ def hex_dump(f):
     print(line)
 
     addr += 16
+    if len(d) < 16:
+      break
 
 
 def debug_print_str(s):
@@ -65,12 +68,14 @@ def debug_print_str(s):
   print(repr(s))
 
 
-class Reader:
-  def __init__(self, filename):
+class CprReader:
+  def __init__(self, filename, output_dir):
     """
     :param str filename:
+    :param str|None output_dir:
     """
     self.filename = filename
+    self.output_dir = output_dir
     self.file = open(filename, "rb")
 
     f = self.file
@@ -78,33 +83,14 @@ class Reader:
     assert_same(f.read(2), b"\xec\xce")
     x1 = self.read_uint16()
     x2 = self.read_uint32()
-    x3 = self.read_uint32()
-    x4 = self.read_uint32()
-    print(x1, x2, x3, x4)
+    print(x1, x2)
 
-    d_filename = self.read_pascal_str()
-    debug_print_str(d_filename)
-    d_file_data = self.read_pascal_str()
-    debug_print_str(d_file_data)
+    num_files = self.read_uint32()
+    for i in range(num_files):
+      self.read_file_entry()
 
-    x = self.read_uint32()  # 1. ?
-    print(x)
-
-    s = self.read_pascal_str()
-    debug_print_str(s)
-    s = self.read_pascal_str()
-    debug_print_str(s)
-
-    x = self.read_uint32()  # 2. ?
-    print(x)
-
-    d_filename = self.read_pascal_str()
-    debug_print_str(d_filename)
-    d_file_data = self.read_pascal_str()
-    debug_print_str(d_file_data)
-    # open(d_filename, "wb").write(d_file_data)
-
-    hex_dump(f)
+    assert_same(f.read(1), b"")  # EOS!
+    #hex_dump(f)
 
   def read_uint16(self):
     """
@@ -123,19 +109,35 @@ class Reader:
     :rtype: bytes
     """
     size = self.read_uint32()
-    assert size > 0
+    if size == 0:
+      return b""
     res = self.file.read(size)
     assert len(res) == size
     if res[-1] == 0:
       res = res[:-1]
     return res
 
+  def read_file_entry(self):
+    idx = self.read_uint32()
+    print(idx)
+    filename = self.read_pascal_str().decode("utf8")
+    debug_print_str(filename)
+    data = self.read_pascal_str()
+    #debug_print_str(data)
+    if self.output_dir:
+      assert not filename.startswith("/") and ".." not in filename
+      output_filename = "%s/%s" % (self.output_dir, filename)
+      os.makedirs(os.path.dirname(output_filename), exist_ok=True)
+      with open(output_filename, "wb") as f:
+        f.write(data)
+
 
 def main():
   arg_parser = argparse.ArgumentParser()
   arg_parser.add_argument("file")
+  arg_parser.add_argument("--output", help="directory")
   args = arg_parser.parse_args()
-  reader = Reader(filename=args.file)
+  reader = CprReader(filename=args.file, output_dir=args.output)
 
 
 if __name__ == '__main__':
