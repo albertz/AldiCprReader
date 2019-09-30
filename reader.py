@@ -48,7 +48,7 @@ def hex_dump(f):
     line += '|'
     print(line)
 
-    addr += 16
+    addr += len(d)
     if len(d) < 16:
       break
 
@@ -113,14 +113,15 @@ class CprReader:
       return b""
     res = self.file.read(size)
     assert len(res) == size
-    if res[-1] == 0:
-      res = res[:-1]
     return res
 
   def read_file_entry(self):
     idx = self.read_uint32()
     print(idx)
-    filename = self.read_pascal_str().decode("utf8")
+    filename = self.read_pascal_str()
+    if filename[-1] == 0:
+      filename = filename[:-1]
+    filename = filename.decode("utf8")
     debug_print_str(filename)
     data = self.read_pascal_str()
     #debug_print_str(data)
