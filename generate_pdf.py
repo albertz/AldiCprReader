@@ -57,8 +57,6 @@ def main():
           w=float(elem.attrib["width"]) * factor_x, h=float(elem.attrib["height"]) * factor_y)
         for sub in elem:
           assert isinstance(sub, ElementTree.Element)
-          #if img_count >= 5:
-          #  break
           if sub.tag == "img":
             print("img:", sub, sub.attrib)
             img_filename = "%s/%s/original" % (args.dir, sub.attrib["src"])
@@ -75,7 +73,6 @@ def main():
 
   #pdf.set_font('Arial', 'B', 16)
   #pdf.cell(40, 10, 'Hello World!')
-  #pdf.image("dump/1569533050784.rsc/original.jpg")
 
   if args.output:
     print("Finished, saving...")
